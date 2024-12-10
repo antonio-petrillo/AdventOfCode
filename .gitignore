@@ -11,3 +11,4 @@ core.clj
 .lsp/
 doc/
 *.txt
+.md
