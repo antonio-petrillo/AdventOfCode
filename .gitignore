@@ -1,0 +1,13 @@
+.DS_Store
+.idea
+*.log
+tmp/
+.md
+.txt
+LICENSE
+project.clj
+core.clj
+.clj-kondo/
+.lsp/
+doc/
+*.txt
