@@ -12,3 +12,4 @@ core.clj
 doc/
 *.txt
 *.md
+/2024/clojure/src/aoc_2024/.nrepl-port
