@@ -1,4 +1,4 @@
-(ns aoc-scratch.day13
+(ns aoc-2024.day13
   (:require [clojure.java.io :as io]
             [clojure.string :as s]
             [clojure.set :as set]))
