@@ -1,16 +1,7 @@
-(ns aoc-scratch.day15
+(ns aoc-2024.day15
   (:require [clojure.java.io :as io]
             [clojure.string :as s]
             [clojure.set :as set]))
-(def input-ex-2
-  (let [[map-str moves] (-> "resources/day15ex-2.txt"
-                           slurp
-                           (s/split #"\n\n"))]
-    {:deposit (->> map-str
-                s/split-lines
-                (map vec)
-                (into []))
-      :moves (->> moves s/split-lines (s/join "") vec)}))
 
 (def input
   (let [[map-str moves] (-> "resources/day15.txt"
@@ -66,12 +57,75 @@
       (let [[p d] (move-robot pos dep m)]
         (recur p d ms)))))
 
+(defn gps-checksum [deposit]
+  (->> deposit
+       (map-indexed (fn [i row]
+                      (map-indexed #(if (= \O %2) (+ (* i 100) %1) 0) row)))
+       (apply concat)
+       (reduce + 0)))
+
 (defn part-1 [input]
-  (let [arranged (arrange input)]
-    (->> arranged
-         (map-indexed (fn [i row]
-                        (map-indexed #(if (= \O %2) (+ (* i 100) %1) 0) row)))
-         (apply concat)
-         (reduce + 0))))
+  (gps-checksum (arrange input)))
 
 (part-1 input) ;=> 1514333
+
+(def expansion
+  {\# '(\# \#)
+   \. '(\. \.)
+   \@ '(\@ \.)
+   \O '(\[ \])})
+
+(defn expand-deposit [deposit]
+  (mapv #(vec (mapcat expansion %)) deposit))
+
+(defn find-boxes-to-shift [deposit robot-pos move]
+  (let [delta (deltas move)]
+    (loop [q (conj clojure.lang.PersistentQueue/EMPTY robot-pos) to-update '() seen #{robot-pos}]
+      (if (empty? q)
+        to-update
+        (let [[r c :as n-pos] (mapv + delta (peek q)) qs (pop q)
+              left [r (dec c)] right [r (inc c)]]
+          (if (seen n-pos)
+            (recur qs to-update seen)
+            (case (get-in deposit n-pos)
+              \. (recur qs to-update (conj seen n-pos))
+              \[ (recur (reduce conj qs [n-pos right])
+                        (reduce conj to-update [[n-pos \[] [right \]]])
+                        (reduce conj seen [n-pos right]))
+              \] (recur (reduce conj qs [n-pos left])
+                        (reduce conj to-update [[n-pos \]] [left \[]])
+                        (reduce conj seen [n-pos left]))
+              \# :none)))))))
+
+(defn shift-part [delta deposit [pos type]]
+  (-> deposit
+      (assoc-in pos \.)
+      (assoc-in (mapv + pos delta) type)))
+
+(defn arrange-2 [{:keys [deposit moves]}]
+  (let [deposit (expand-deposit deposit)
+        start (get-start-pos deposit)]
+   (loop [deposit (assoc-in deposit start \.) pos start [move & moves] moves]
+      (if (nil? move)
+        deposit
+        (let [to-shift (find-boxes-to-shift deposit pos move) delta (deltas move)]
+          (if (= :none to-shift)
+            (recur deposit pos moves)
+            (recur
+             (reduce (partial shift-part delta) deposit to-shift)
+             (mapv + pos delta)
+             moves)))))))
+
+(defn gps-checksum-2 [deposit]
+  (->> deposit
+       (map-indexed (fn [i row]
+                      (map-indexed #(if (= \[ %2) (+ (* i 100) %1) 0) row)))
+       (apply concat)
+       (reduce + 0)))
+
+(defn part-2 [input]
+  (->> input
+       arrange-2
+       gps-checksum-2))
+
+(part-2 input) ;=> 1528453
